@@ -25,17 +25,17 @@ const sb = mysql.createConnection({
   database: "sql12652310",
 });
 
-
-app.get('/newtest', (req,res)=>{
-  const sql = "SELECT * FROM Login"
-  sb.query(sql,(err,data)=>{
-    if(err) return res.json(err);
-    return res.json(data)
-  })
-})
+app.get("/newtest", (req, res) => {
+  const sql = "SELECT * FROM Login";
+  sb.query(sql, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
 
 app.post("/spi", (req, res) => {
-    const sql = "INSERT INTO signup_details (name, email, password) VALUES (?, ?, ?)";
+  const sql =
+    "INSERT INTO signup_details (name, email, password) VALUES (?, ?, ?)";
 
   const values = [req.body.name, req.body.email, req.body.password];
   db.query(sql, values, (err, data) => {
