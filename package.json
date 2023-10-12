@@ -10,13 +10,13 @@
   "name": "nodejs",
   "version": "1.0.0",
   "main": "Index.js",
-  "engines":{
-    "node":"14.x"
-  },
+  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "dev": "nodemon server"
+    "start": "npx nodemon index.js",
+    "dev": "nodemon server",
+    "build":"node Index.js"
+    
   },
   "keywords": [],
   "author": "",

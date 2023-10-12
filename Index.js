@@ -33,6 +33,28 @@ app.get("/newtest", (req, res) => {
   });
 });
 
+app.post("/newtest", (req, res) => {
+  const sql = "INSERT INTO Login (Email, Phone, Password) VALUES (?,?,?)";
+
+  const value = [req.body.email, req.body.phoneNumber, req.body.password];
+  db.query(sql, value, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+app.post("/newapi", (req, res) => {
+  const sql = "INSERT INTO Login (Email, Phone, Password) VALUES (?,?,?)";
+
+  const value = [req.body.email, req.body.phoneNumber, req.body.password];
+  sb.query(sql, value, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+
+
 app.post("/spi", (req, res) => {
   const sql =
     "INSERT INTO signup_details (name, email, password) VALUES (?, ?, ?)";
