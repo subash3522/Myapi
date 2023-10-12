@@ -5,8 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 
 app.use(cors({
-  origin: '*'
+  origin: 'https://apitesting-com.onrender.com'
 }));
+
 
 app.use(express.json());
 const aata = { user: ["user1", "user2", "user3"] };
