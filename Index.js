@@ -1,11 +1,23 @@
 express = require("express");
 const cors = require("cors");
 const mysql = require("mysql");
+const { v4: uuidv4 } = require('uuid');
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: '*'
+}));
+
 app.use(express.json());
 const aata = { user: ["user1", "user2", "user3"] };
+
+connection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    throw err;
+  }
+  console.log('Connected to MySQL database');
+});
 
 app.get("/bpi", (req, res) => {
   res.json(aata);
@@ -74,6 +86,6 @@ app.get("/spi", (req, res) => {
   });
 });
 
-app.listen(5000, () => {
+app.listen( process.env.PORT || 5000, () => {
   console.log("it is ");
 });
