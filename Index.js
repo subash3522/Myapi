@@ -1,24 +1,18 @@
 express = require("express");
 const cors = require("cors");
 const mysql = require("mysql");
-const { v4: uuidv4 } = require('uuid');
 const app = express();
+const jws = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 
 app.use(cors({
-  origin: 'https://apitesting-com.onrender.com'
+  origin:["http://localhost:3000"],
+  methods:['GET','POST'],
+  credentials:true
 }));
-
 
 app.use(express.json());
 const aata = { user: ["user1", "user2", "user3"] };
-
-connection.connect((err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-    throw err;
-  }
-  console.log('Connected to MySQL database');
-});
 
 app.get("/bpi", (req, res) => {
   res.json(aata);
@@ -61,9 +55,55 @@ app.post("/newapi", (req, res) => {
 
   const value = [req.body.email, req.body.phoneNumber, req.body.password];
   sb.query(sql, value, (err, data) => {
-    if (err) return res.json(err);
+    if (err) {
+      console.error("Error executing SQL query:", err);
+      return res.json(err);
+    }
     return res.json(data);
   });
+});
+
+app.post("/userlogin", (req,res)=>{
+  const sql = "SELECT * FROM Login WHERE Email = ? AND Password = ?";
+  const values = [req.body.email, req.body.password];
+  console.log(req.body.email, req.body.password);
+  sb.query(sql, values, (err,data)=>{
+    if(err) {
+      return res.json(err);
+    }
+    if(data.length > 0){
+const name = data[0].name;
+const token = jws.sign({name},"jwt-secret-key",{expiresIn:"1d"});
+res.cookie('token',token);
+
+      return res.json({ status: "success" });
+
+    } else {
+      return res.json({ message: "Invalid email or password" });
+    }
+  });
+})
+
+app.get("/userlogin", (req,res)=>{
+const sql = "SELECT * FROM Login WHERE Email = ?"
+const value = "admin@gmail.com"
+sb.query(sql,value, (err,data)=>{
+  if(err){
+    return res.json(err)
+  }
+  else{
+    return res.json(data)
+  }
+})
+})
+
+app.get("/userdelete", (req, res) => {
+  const sql = "SELECT * FROM Login";
+
+  sb.query(sql, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  })
 });
 
 
@@ -80,13 +120,13 @@ app.post("/spi", (req, res) => {
 });
 
 app.get("/spi", (req, res) => {
-  const sql = "SELECT * FROM signup_details"; // This SQL query fetches all rows from the table
+  const sql = "SELECT * FROM signup_details";
   db.query(sql, (err, data) => {
     if (err) return res.json(err);
     return res.json(data);
   });
 });
 
-app.listen( process.env.PORT || 5000, () => {
+app.listen(process.env.PORT || 5001, () => {
   console.log("it is ");
 });
