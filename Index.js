@@ -5,6 +5,7 @@ const app = express();
 const jws = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 
+app.use(cookieParser());
 app.use(cors({
   origin:["http://localhost:3000"],
   methods:['GET','POST'],
@@ -62,6 +63,31 @@ app.post("/newapi", (req, res) => {
     return res.json(data);
   });
 });
+const verifyuser =(req,res,next)=>{
+  const token = req.cookies.token
+  if(!token){
+    console.log("no token found");
+    return res.json({error:"token not verified"})
+    
+  }
+  else{
+    jws.verify(token, "jwt-secret-key",(err,decode)=>{
+      if(err){
+        return res.json({error:"token is not ok"})
+      }
+      else{
+        res.email= decode.email;
+        next()
+      }
+    })
+  }
+
+}
+
+app.get("/logout",(req,res)=>{
+  res.clearCookie('token');
+  return res.json({status:"successful"})
+})
 
 app.post("/userlogin", (req,res)=>{
   const sql = "SELECT * FROM Login WHERE Email = ? AND Password = ?";
@@ -72,8 +98,8 @@ app.post("/userlogin", (req,res)=>{
       return res.json(err);
     }
     if(data.length > 0){
-const name = data[0].name;
-const token = jws.sign({name},"jwt-secret-key",{expiresIn:"1d"});
+const email = data[0].email;
+const token = jws.sign({email},"jwt-secret-key",{expiresIn:"1d"});
 res.cookie('token',token);
 
       return res.json({ status: "success" });
@@ -82,6 +108,11 @@ res.cookie('token',token);
       return res.json({ message: "Invalid email or password" });
     }
   });
+})
+
+
+app.get("/auth",verifyuser,(req,res)=>{
+  return res.json({status:"success", email:res.email})
 })
 
 app.get("/userlogin", (req,res)=>{
