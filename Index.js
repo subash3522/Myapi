@@ -34,8 +34,8 @@ const sb = mysql.createConnection({
 });
 
 app.get("/newtest", (req, res) => {
-  const sql = "SELECT * FROM Login";
-  sb.query(sql, (err, data) => {
+  const sql = "SELECT * FROM login";
+  db.query(sql, (err, data) => {
     if (err) return res.json(err);
     return res.json(data);
   });
@@ -52,10 +52,10 @@ app.post("/newtest", (req, res) => {
 });
 
 app.post("/newapi", (req, res) => {
-  const sql = "INSERT INTO Login (Email, Phone, Password) VALUES (?,?,?)";
+  const sql = "INSERT INTO login (Email, Phone, Password) VALUES (?,?,?)";
 
   const value = [req.body.email, req.body.phoneNumber, req.body.password];
-  sb.query(sql, value, (err, data) => {
+  db.query(sql, value, (err, data) => {
     if (err) {
       console.error("Error executing SQL query:", err);
       return res.json(err);
@@ -90,10 +90,10 @@ app.get("/logout",(req,res)=>{
 })
 
 app.post("/userlogin", (req,res)=>{
-  const sql = "SELECT * FROM Login WHERE Email = ? AND Password = ?";
+  const sql = "SELECT * FROM login WHERE Email = ? AND Password = ?";
   const values = [req.body.email, req.body.password];
   console.log(req.body.email, req.body.password);
-  sb.query(sql, values, (err,data)=>{
+db.query(sql, values, (err,data)=>{
     if(err) {
       return res.json(err);
     }
@@ -116,9 +116,9 @@ app.get("/auth",verifyuser,(req,res)=>{
 })
 
 app.get("/userlogin", (req,res)=>{
-const sql = "SELECT * FROM Login WHERE Email = ?"
+const sql = "SELECT * FROM login WHERE Email = ?"
 const value = "admin@gmail.com"
-sb.query(sql,value, (err,data)=>{
+db.query(sql,value, (err,data)=>{
   if(err){
     return res.json(err)
   }
@@ -129,9 +129,9 @@ sb.query(sql,value, (err,data)=>{
 })
 
 app.get("/userdelete", (req, res) => {
-  const sql = "SELECT * FROM Login";
+  const sql = "SELECT * FROM login";
 
-  sb.query(sql, (err, data) => {
+  db.query(sql, (err, data) => {
     if (err) return res.json(err);
     return res.json(data);
   })
