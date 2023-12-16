@@ -88,7 +88,8 @@ app.post("/suvasearchsignup", (req, res) => {
     return res.json(data);
   });
 });
-
+// app.get("/suvasearchsignup", (req, res) => {
+  
 app.get("/suvasearchsignup", (req, res) => {
   const sql = "SELECT * FROM s_login";
   db.query(sql, (err, data) => {
