@@ -60,6 +60,7 @@ app.post("/newtest", (req, res) => {
   });
 });
 
+//dummy testing
 app.post("/newapi", (req, res) => {
   const sql = "INSERT INTO login (Email, Phone, Password) VALUES (?,?,?)";
 
@@ -74,7 +75,6 @@ app.post("/newapi", (req, res) => {
 });
 
 //for suvasearch signup post method
-
 app.post("/suvasearchsignup", (req, res) => {
   const sql = "INSERT INTO login_table (Email, Password) VALUES (?,?)";
 
@@ -88,8 +88,10 @@ app.post("/suvasearchsignup", (req, res) => {
     return res.json(data);
   });
 });
+
+//suvasearch signup get
+
 // app.get("/suvasearchsignup", (req, res) => {
-  
 app.get("/suvasearchsignup", (req, res) => {
   const sql = "SELECT * FROM login_table";
   mb.query(sql, (err, data) => {
@@ -98,6 +100,7 @@ app.get("/suvasearchsignup", (req, res) => {
   });
 });
 
+//verify user for bad ui
 const verifyuser = (req, res, next) => {
   const token = req.cookies.token;
   if (!token) {
@@ -115,11 +118,37 @@ const verifyuser = (req, res, next) => {
   }
 };
 
+//suvasearch user verification
+const verifySuvauser = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    console.log("no token found");
+    return res.json({ error: "token not verified" });
+  } else {
+    jws.verify(token, "jwt-suvasecret-key", (err, decode) => {
+      if (err) {
+        return res.json({ error: "token is not ok" });
+      } else {
+        res.email = decode.email;
+        next();
+      }
+    });
+  }
+};
+
+//logout function for badui
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
   return res.json({ status: "successful" });
 });
 
+//logout function for suvasearch
+app.get("/suvalogout", (req, res) => {
+  res.clearCookie("token");
+  return res.json({ status: "successful" });
+});
+
+// login verification for badui
 app.post("/userlogin", (req, res) => {
   const sql = "SELECT * FROM login WHERE Email = ? AND Password = ?";
   const values = [req.body.email, req.body.password];
@@ -140,7 +169,34 @@ app.post("/userlogin", (req, res) => {
   });
 });
 
+//for suvasearch login verification
+app.post("/suvasearchlogin", (req, res) => {
+  const sql = "SELECT * FROM login_table WHERE Email= ? AND Password = ?";
+  const value = [req.body.email, req.body.password];
+  mb.query(sql, value, (err, data) => {
+    if (err) return res.json(err);
+
+    if (data.length > 0) {
+      const email = data[0].email;
+      const token = jws.sign({ email }, "jwt-suvasecret-key", {
+        expiresIn: "1d",
+      });
+      res.cookie("token", token);
+
+      return res.json({ status: "success" });
+    } else {
+      return res.json({ message: "Invalid email or password" });
+    }
+  });
+});
+
+//login authentication for badui
 app.get("/auth", verifyuser, (req, res) => {
+  return res.json({ status: "success", email: res.email });
+});
+
+//login authentication for suvasearch
+app.get("/suvaauth", verifySuvauser, (req, res) => {
   return res.json({ status: "success", email: res.email });
 });
 
@@ -156,6 +212,7 @@ app.get("/userlogin", (req, res) => {
   });
 });
 
+//for delete user of badui
 app.get("/userdelete", (req, res) => {
   const sql = "SELECT * FROM login";
 
@@ -165,6 +222,7 @@ app.get("/userdelete", (req, res) => {
   });
 });
 
+//post for dummy testing
 app.post("/spi", (req, res) => {
   const sql =
     "INSERT INTO signup_details (name, email, password) VALUES (?, ?, ?)";
@@ -176,6 +234,7 @@ app.post("/spi", (req, res) => {
   });
 });
 
+//get for dummy testing
 app.get("/spi", (req, res) => {
   const sql = "SELECT * FROM signup_details";
   db.query(sql, (err, data) => {
