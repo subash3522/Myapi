@@ -91,8 +91,8 @@ app.post("/suvasearchsignup", (req, res) => {
 // app.get("/suvasearchsignup", (req, res) => {
   
 app.get("/suvasearchsignup", (req, res) => {
-  const sql = "SELECT * FROM s_login";
-  db.query(sql, (err, data) => {
+  const sql = "SELECT * FROM login_table";
+  mb.query(sql, (err, data) => {
     if (err) return res.json(err);
     else return res.json(data);
   });
