@@ -63,6 +63,32 @@ app.post("/newapi", (req, res) => {
     return res.json(data);
   });
 });
+
+//for suvasearch signup post method
+
+app.post("/suvasearchsignup", (req,res)=>{
+  const sql = "INSERT INTO S_login (Email, Password) VALUES (?,?)"
+
+  const value = [req.body.email,req.body.password]
+
+  db.query(sql,value, (err,data)=>{
+    if(err){
+      console.error('error executing sql query:', err);
+      return res.json(err);
+    }
+    return res.json(data)
+  })
+})
+
+app.get("/suvasearchsignup",(req,res)=>{
+  const sql = 'SELECT * FROM s_login'
+  db.query(sql,(err,data)=>{
+    if(err)
+    return res.json(err);
+  else return res.json(data)
+  })
+})
+
 const verifyuser =(req,res,next)=>{
   const token = req.cookies.token
   if(!token){
