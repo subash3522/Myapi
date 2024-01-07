@@ -4,6 +4,8 @@ const mysql = require("mysql");
 const app = express();
 const jws = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const multer = require("multer");
+const path = require("path");
 
 app.use(cookieParser());
 app.use(
@@ -17,6 +19,23 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(express.static("publicimages"));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "publicimages");
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      file.fieldname + "_" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+const upload = multer({
+  storage: storage,
+});
 
 app.use(express.json());
 const aata = { user: ["user1", "user2", "user3"] };
@@ -44,6 +63,25 @@ const sb = mysql.createConnection({
   user: "sql12652310",
   password: "uINDUhDptU",
   database: "sql12652310",
+});
+
+//post for image upload
+app.post("/upload", upload.single("image"), (req, res) => {
+  const image = req.file.filename;
+  const sql = "INSERT INTO imagetable (Image) VALUES (?)";
+
+  mb.query(sql, [image], (err, result) => {
+    if (err) return res.json({ message: "error image" });
+    return res.json({ status: "success" });
+  });
+});
+
+app.get("/upload", (req, res) => {
+  const sql = "SELECT * FROM imagetable";
+  mb.query(sql, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
 });
 
 app.get("/newtest", (req, res) => {
@@ -129,7 +167,7 @@ const verifySuvauser = (req, res, next) => {
     console.log("no token found");
     return res.json({ error: "token not verified" });
   } else {
-    jws.verify(token, "jwt-suvasecret-key", (err, decode) => {
+    jws.verify(token, "jwt-secret-key", (err, decode) => {
       if (err) {
         return res.json({ error: "token is not ok" });
       } else {
@@ -182,7 +220,7 @@ app.post("/suvasearchlogin", (req, res) => {
 
     if (data.length > 0) {
       const email = data[0].email;
-      const token = jws.sign({ email }, "jwt-suvasecret-key", {
+      const token = jws.sign({ email }, "jwt-secret-key", {
         expiresIn: "1d",
       });
       res.cookie("token", token);
