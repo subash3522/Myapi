@@ -6,6 +6,8 @@ const jws = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const path = require("path");
+const { log } = require("console");
+const fs = require("fs").promises;
 
 app.use(cookieParser());
 app.use(
@@ -21,6 +23,8 @@ app.use(
 );
 
 app.use(express.static("publicimages"));
+
+app.use("/uploads", express.static("publicimages"));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -84,6 +88,83 @@ app.get("/upload", (req, res) => {
   });
 });
 
+//for mountains post method
+app.post(
+  "/api/addMountain",
+  upload.fields([
+    { name: "photo", maxCount: 1 },
+    { name: "description", maxCount: 1 },
+  ]),
+  (req, res) => {
+    const { mountainName, weather, popularity, budget, category } = req.body;
+    const photoPath = req.files["photo"][0].filename;
+    const descriptionPath = req.files["description"][0].path;
+    const sql =
+      "INSERT INTO mountains (mountainName,weather, popularity, budget, category, photoPath, descriptionPath) VALUES (?, ?, ?, ?,?,?,?)";
+    mb.query(
+      sql,
+      [
+        mountainName,
+        weather,
+        popularity,
+        budget,
+        category,
+        photoPath,
+        descriptionPath,
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("Error inserting into MySQL:", err);
+          res.status(500).json({ error: "Internal Server Error" });
+        } else {
+          console.log("Mountain added to the database");
+          res.json({ message: "Mountain added successfully" });
+        }
+      }
+    );
+  }
+);
+//end for mountains post methos
+
+//formountains get method
+
+app.get("/api/mountains", async (req, res) => {
+  try {
+    const sql = "SELECT * FROM mountains";
+    const mountains = await new Promise((resolve, reject) => {
+      mb.query(sql, (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+
+    // Read the content of .txt files
+    const mountainsWithContent = await Promise.all(
+      mountains.map(async (mountain) => {
+        const descriptionPath = mountain.descriptionPath;
+        const descriptionContent = await fs.readFile(
+          descriptionPath,
+
+          "utf-8"
+        );
+        return {
+          ...mountain,
+          descriptionContent,
+        };
+      })
+    );
+
+    res.json({ mountains: mountainsWithContent });
+  } catch (error) {
+    console.error("Error fetching mountains:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+//end of mountains get method
 app.get("/newtest", (req, res) => {
   const sql = "SELECT * FROM login";
   db.query(sql, (err, data) => {
