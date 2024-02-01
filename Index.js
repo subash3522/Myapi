@@ -15,6 +15,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "suvasearch.com",
+      "https://suvasearch-git-master-subash3522.vercel.app",
       "https://apitesting-com.onrender.com",
     ],
     methods: ["GET", "POST"],
@@ -165,6 +166,88 @@ app.get("/api/mountains", async (req, res) => {
 });
 
 //end of mountains get method
+
+//get method of mountain for id parameter
+// app.get("/mountain/:id", (req, res) => {
+//   const mountainId = req.params.id;
+
+//   mb.query(
+//     "SELECT * FROM mountains WHERE id = ?",
+//     [mountainId],
+//     (err, results) => {
+//       if (err) {
+//         console.error("Error querying MySQL:", err);
+//         res.status(500).send("Internal Server Error");
+//       } else {
+//         if (results.length === 0) {
+//           res.status(404).send("Mountain not found");
+//         } else {
+//           res.json(results);
+//         }
+//       }
+//     }
+//   );
+// });
+
+app.get("/mountain/:id", async (req, res) => {
+  const mountainId = req.params.id;
+
+  try {
+    const sql = "SELECT * FROM mountains WHERE id = ?";
+    const mountain = await new Promise((resolve, reject) => {
+      mb.query(sql, [mountainId], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+
+    if (mountain.length === 0) {
+      res.status(404).send("Mountain not found");
+      return;
+    }
+
+    const descriptionPath = mountain[0].descriptionPath;
+    const descriptionContent = await fs.readFile(descriptionPath, "utf-8");
+
+    const mountainWithContent = {
+      ...mountain[0],
+      descriptionContent,
+    };
+
+    res.json(mountainWithContent);
+  } catch (error) {
+    console.error("Error querying MySQL or reading file:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+//end of get metohd of mountain for id parameter
+
+//get for budget filter
+app.get("/mountains/:budget", (req, res) => {
+  const mountainId = req.params.budget;
+
+  mb.query(
+    "SELECT * FROM mountains WHERE budget = ?",
+    [mountainId],
+    (err, results) => {
+      if (err) {
+        console.error("Error querying MySQL:", err);
+        res.status(500).send("Internal Server Error");
+      } else {
+        if (results.length === 0) {
+          res.status(404).send("Mountain not found");
+        } else {
+          res.json(results);
+        }
+      }
+    }
+  );
+});
+
 app.get("/newtest", (req, res) => {
   const sql = "SELECT * FROM login";
   db.query(sql, (err, data) => {
@@ -227,7 +310,7 @@ app.get("/suvasearchsignup", (req, res) => {
 const verifyuser = (req, res, next) => {
   const token = req.cookies.token;
   if (!token) {
-    console.log("no token found");
+    // console.log("no token found");
     return res.json({ error: "token not verified" });
   } else {
     jws.verify(token, "jwt-secret-key", (err, decode) => {
@@ -252,7 +335,7 @@ const verifySuvauser = (req, res, next) => {
       if (err) {
         return res.json({ error: "token is not ok" });
       } else {
-        res.email = decode.email;
+        req.email = decode.email;
         next();
       }
     });
@@ -300,27 +383,72 @@ app.post("/suvasearchlogin", (req, res) => {
     if (err) return res.json(err);
 
     if (data.length > 0) {
-      const email = data[0].email;
-      const token = jws.sign({ email }, "jwt-secret-key", {
+      const userData = {
+        userId: data[0].ID,
+        email: data[0].email,
+      };
+      const token = jws.sign({ email: userData.email }, "jwt-secret-key", {
         expiresIn: "1d",
       });
       res.cookie("token", token);
 
-      return res.json({ status: "success" });
+      return res.json({ status: "success", userData });
     } else {
       return res.json({ message: "Invalid email or password" });
     }
   });
 });
 
+//postmethod for like
+app.post("/like", (req, res) => {
+  const sql = "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
+
+  const values = [req.body.userIdForLIke, req.body.postIdForLike];
+  mb.query(sql, values, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+//end of postmethod for like
+
+//get method for like
+app.get("/like/:likeId", (req, res) => {
+  const likeId = req.params.likeId;
+
+  // SQL query to join Like_Table and Post_Table on PostID
+  // and select the Post_Table details where Like_Table.LikeID matches
+  const query = `
+    SELECT mountains.* 
+    FROM mountains
+    JOIN Like_Table ON mountains.ID = mountains.ID
+    WHERE mountains.ID = ?  
+  `;
+
+  mb.query(query, [likeId], (err, results) => {
+    if (err) {
+      console.error("Error executing the query:", err);
+      res.status(500).send("Internal Server Error");
+      return;
+    }
+
+    if (results.length === 0) {
+      res.status(404).send("No posts found for the given LikeID.");
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+//end of get method for like
+
 //login authentication for badui
 app.get("/auth", verifyuser, (req, res) => {
-  return res.json({ status: "success", email: res.email });
+  return res.json({ status: "success", email: req.email });
 });
 
 //login authentication for suvasearch
 app.get("/suvaauth", verifySuvauser, (req, res) => {
-  return res.json({ status: "success", email: res.email });
+  return res.json({ status: "success", Semail: req.email });
 });
 
 app.get("/userlogin", (req, res) => {
