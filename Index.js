@@ -146,6 +146,7 @@ app.get("/api/mountains", async (req, res) => {
     const mountainsWithContent = await Promise.all(
       mountains.map(async (mountain) => {
         const descriptionPath = mountain.descriptionPath;
+
         const descriptionContent = await fs.readFile(
           descriptionPath,
 
@@ -248,6 +249,29 @@ app.get("/mountains/:budget", (req, res) => {
   );
 });
 
+//like counter using param starts here
+app.get("/likecounter/:like", (req, res) => {
+  const likeCounter = req.params.like;
+
+  mb.query(
+    "SELECT * FROM Like_Table WHERE PostID = ?",
+    [likeCounter],
+    (err, results) => {
+      if (err) {
+        console.error("Error querying MySQL:", err);
+        res.status(500).send("Internal Server Error");
+      } else {
+        if (results.length === 0) {
+          res.status(404).send("Post not found");
+        } else {
+          res.json(results);
+        }
+      }
+    }
+  );
+});
+//like counter using param ends here
+
 app.get("/newtest", (req, res) => {
   const sql = "SELECT * FROM login";
   db.query(sql, (err, data) => {
@@ -281,17 +305,59 @@ app.post("/newapi", (req, res) => {
 });
 
 //for suvasearch signup post method
+// app.post("/suvasearchsignup", (req, res) => {
+//   const sql = "INSERT INTO login_table (Email, Password) VALUES (?,?)";
+
+//   const value = [req.body.email, req.body.password];
+
+//   mb.query(sql, value, (err, data) => {
+//     if (err) {
+//       console.error("error executing sql query:", err);
+//       return res.json(err);
+//     }
+//     return res.json(data);
+//   });
+// });
+
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
+
 app.post("/suvasearchsignup", (req, res) => {
-  const sql = "INSERT INTO login_table (Email, Password) VALUES (?,?)";
+  const { email, password } = req.body;
 
-  const value = [req.body.email, req.body.password];
-
-  mb.query(sql, value, (err, data) => {
+  // Check if email already exists
+  const checkEmailQuery = "SELECT * FROM login_table WHERE Email = ?";
+  mb.query(checkEmailQuery, [email], (err, result) => {
     if (err) {
-      console.error("error executing sql query:", err);
-      return res.json(err);
+      console.error("Error executing SQL query:", err);
+      return res.status(500).json({ error: "Internal server error" });
     }
-    return res.json(data);
+    if (result.length > 0) {
+      // Email already exists
+      return res.status(400).json({ error: "Email already exists" });
+    } else {
+      // Email does not exist, proceed with hashing the password
+      bcrypt.hash(password, saltRounds, (hashErr, hash) => {
+        if (hashErr) {
+          console.error("Error hashing password:", hashErr);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+
+        // Insert the new user with the hashed password
+        const sql = "INSERT INTO login_table (Email, Password) VALUES (?,?)";
+        const values = [email, hash];
+        mb.query(sql, values, (insertErr, data) => {
+          if (insertErr) {
+            console.error("Error executing SQL query:", insertErr);
+            return res.status(400).json(insertErr);
+          }
+          return res.json({
+            success: "User registered successfully",
+            data: data,
+          });
+        });
+      });
+    }
   });
 });
 
@@ -376,39 +442,130 @@ app.post("/userlogin", (req, res) => {
 });
 
 //for suvasearch login verification
+// app.post("/suvasearchlogin", (req, res) => {
+//   const sql = "SELECT * FROM login_table WHERE Email= ? AND Password = ?";
+//   const value = [req.body.email, req.body.password];
+//   mb.query(sql, value, (err, data) => {
+//     if (err) return res.json(err);
+
+//     if (data.length > 0) {
+//       const userData = {
+//         userId: data[0].ID,
+//         email: data[0].email,
+//       };
+//       const token = jws.sign({ email: userData.email }, "jwt-secret-key", {
+//         expiresIn: "1d",
+//       });
+//       res.cookie("token", token);
+
+//       return res.json({ status: "success", userData });
+//     } else {
+//       return res.json({ message: "Invalid email or password" });
+//     }
+//   });
+// });
+
+const jwt = require("jsonwebtoken");
+
 app.post("/suvasearchlogin", (req, res) => {
-  const sql = "SELECT * FROM login_table WHERE Email= ? AND Password = ?";
-  const value = [req.body.email, req.body.password];
-  mb.query(sql, value, (err, data) => {
-    if (err) return res.json(err);
+  const email = req.body.email.trim(); // Remove leading/trailing whitespaces
+  const password = req.body.password;
 
-    if (data.length > 0) {
-      const userData = {
-        userId: data[0].ID,
-        email: data[0].email,
-      };
-      const token = jws.sign({ email: userData.email }, "jwt-secret-key", {
-        expiresIn: "1d",
+  // Retrieve hashed password associated with the email
+  const getPasswordQuery =
+    "SELECT ID, Email, Password FROM login_table WHERE Email = ?";
+  mb.query(getPasswordQuery, [email], (err, userData) => {
+    if (err) {
+      console.error("Error executing SQL query:", err);
+      return res.json({ error: "Internal server error" });
+    }
+
+    if (userData.length > 0) {
+      const hashedPassword = userData[0].Password;
+
+      // Compare the hashed password with the one provided during login
+      bcrypt.compare(password, hashedPassword, (compareErr, match) => {
+        if (compareErr) {
+          console.error("Error comparing passwords:", compareErr);
+          return res.json({ error: "Internal server error" });
+        }
+
+        if (match) {
+          // Passwords match, generate JWT token
+          const token = jwt.sign(
+            { email: userData[0].Email, userId: userData[0].ID },
+            "jwt-secret-key",
+            {
+              expiresIn: "1d",
+            }
+          );
+
+          res.cookie("token", token);
+          return res.json({
+            status: "success",
+            userData: { userId: userData[0].ID, email: userData[0].Email },
+          });
+        } else {
+          // Passwords do not match
+          return res.json({ message: "Invalid email or password" });
+        }
       });
-      res.cookie("token", token);
-
-      return res.json({ status: "success", userData });
     } else {
+      // No user found with the provided email
       return res.json({ message: "Invalid email or password" });
     }
   });
 });
 
 //postmethod for like
-app.post("/like", (req, res) => {
-  const sql = "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
 
-  const values = [req.body.userIdForLIke, req.body.postIdForLike];
-  mb.query(sql, values, (err, data) => {
-    if (err) return res.json(err);
-    return res.json(data);
+// app.post("/like", (req, res) => {
+//   const sql = "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
+
+//   const values = [req.body.userIdForLIke, req.body.postIdForLike];
+//   mb.query(sql, values, (err, data) => {
+//     if (err) return res.json(err);
+//     return res.json(data);
+//   });
+// });
+
+app.post("/like", (req, res) => {
+  // SQL query to check if the user has already liked the post
+  const checkLikeSql =
+    "SELECT * FROM Like_Table WHERE UserID = ? AND PostID = ?";
+  const valuesToCheck = [req.body.userIdForLIke, req.body.postIdForLike];
+
+  mb.query(checkLikeSql, valuesToCheck, (checkErr, checkData) => {
+    if (checkErr) {
+      console.error("Error checking existing like:", checkErr);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    // If like already exists, respond that the user has already liked the post
+    if (checkData.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "You have already liked this post." });
+    } else {
+      // If like does not exist, proceed to insert the new like
+      const insertLikeSql =
+        "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
+      const insertValues = [req.body.userIdForLIke, req.body.postIdForLike];
+
+      mb.query(insertLikeSql, insertValues, (insertErr, insertData) => {
+        if (insertErr) {
+          console.error("Error inserting like:", insertErr);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+        return res.json({
+          message: "Post liked successfully",
+          data: insertData,
+        });
+      });
+    }
   });
 });
+
 //end of postmethod for like
 
 //get method for like
@@ -418,10 +575,10 @@ app.get("/like/:likeId", (req, res) => {
   // SQL query to join Like_Table and Post_Table on PostID
   // and select the Post_Table details where Like_Table.LikeID matches
   const query = `
-    SELECT mountains.* 
-    FROM mountains
-    JOIN Like_Table ON mountains.ID = mountains.ID
-    WHERE mountains.ID = ?  
+  SELECT mountains.* 
+FROM mountains
+JOIN Like_Table ON mountains.ID = Like_Table.PostID
+WHERE Like_Table.UserID = 1;  
   `;
 
   mb.query(query, [likeId], (err, results) => {
@@ -440,6 +597,80 @@ app.get("/like/:likeId", (req, res) => {
 });
 
 //end of get method for like
+
+//post method for save option
+
+app.post("/save", (req, res) => {
+  // SQL query to check if the user has already liked the post
+  const checkLikeSql =
+    "SELECT * FROM Save_Table WHERE UserID = ? AND PostID = ?";
+  const valuesToCheck = [req.body.userIdForSave, req.body.postIdForSave];
+
+  mb.query(checkLikeSql, valuesToCheck, (checkErr, checkData) => {
+    if (checkErr) {
+      console.error("Error checking existing like:", checkErr);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    // If like already exists, respond that the user has already liked the post
+    if (checkData.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "You have already Saved this post." });
+    } else {
+      // If like does not exist, proceed to insert the new like
+      const insertLikeSql =
+        "INSERT INTO Save_Table (UserID, PostID) VALUES (?, ?)";
+      const insertValues = [req.body.userIdForSave, req.body.postIdForSave];
+
+      mb.query(insertLikeSql, insertValues, (insertErr, insertData) => {
+        if (insertErr) {
+          console.error("Error inserting like:", insertErr);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+        return res.json({
+          message: "Post liked successfully",
+          data: insertData,
+        });
+      });
+    }
+  });
+});
+
+// end of post method for save option
+
+//get method for liked post
+//get method for like
+app.get("/save/:save", (req, res) => {
+  const saveId = req.params.saveId;
+
+  // SQL query to join Like_Table and Post_Table on PostID
+  // and select the Post_Table details where Like_Table.LikeID matches
+  const query = `
+  SELECT mountains.* 
+FROM mountains
+JOIN Save_Table ON mountains.ID = Save_Table.PostID
+WHERE Save_Table.UserID = 1;  
+  `;
+
+  mb.query(query, [saveId], (err, results) => {
+    if (err) {
+      console.error("Error executing the query:", err);
+      res.status(500).send("Internal Server Error");
+      return;
+    }
+
+    if (results.length === 0) {
+      res.status(404).send("No posts found for the given LikeID.");
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+//end of get method for like
+
+//end of get method for liked post
 
 //login authentication for badui
 app.get("/auth", verifyuser, (req, res) => {
