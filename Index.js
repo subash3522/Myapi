@@ -14,7 +14,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "suvasearch.com",
+      "https://suvasearch.com",
       "https://suvasearch-git-master-subash3522.vercel.app",
       "https://apitesting-com.onrender.com",
     ],
