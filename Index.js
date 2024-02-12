@@ -499,8 +499,8 @@ app.post("/suvasearchlogin", (req, res) => {
               expiresIn: "1d",
             }
           );
-
-          res.cookie("token", token);
+          console.log("Token generated:", token);
+          res.cookie("token", token,{ sameSite: 'None', secure: true });
           return res.json({
             status: "success",
             userData: { userId: userData[0].ID, email: userData[0].Email },
