@@ -100,6 +100,13 @@ app.post(
     const { mountainName, weather, popularity, budget, category } = req.body;
     const photoPath = req.files["photo"][0].filename;
     const descriptionPath = req.files["description"][0].path;
+
+    //added later
+    photoPath = path.resolve(photoPath);
+descriptionPath = path.resolve(descriptionPath);
+
+    //added later ends
+
     const sql =
       "INSERT INTO mountains (mountainName,weather, popularity, budget, category, photoPath, descriptionPath) VALUES (?, ?, ?, ?,?,?,?)";
     mb.query(
