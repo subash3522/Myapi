@@ -1,9 +1,0 @@
-This is the first paragraph.
-It can contain multiple sentences.
-
-
-This is the second paragraph.
-It also can have several sentences.
-
-And here is the third paragraph.
-It might have additional details or information.

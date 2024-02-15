@@ -499,8 +499,8 @@ app.post("/suvasearchlogin", (req, res) => {
               expiresIn: "1d",
             }
           );
-          console.log("Token generated:", token);
-          res.cookie("token", token,{ sameSite: 'None', secure: true });
+
+          res.cookie("token", token, { sameSite: "None", secure: true });
           return res.json({
             status: "success",
             userData: { userId: userData[0].ID, email: userData[0].Email },
@@ -529,11 +529,48 @@ app.post("/suvasearchlogin", (req, res) => {
 //   });
 // });
 
+// app.post("/like", (req, res) => {
+//   // SQL query to check if the user has already liked the post
+//   const checkLikeSql =
+//     "SELECT * FROM Like_Table WHERE UserID = ? AND PostID = ?";
+//   const valuesToCheck = [req.body.userIdForLIke, req.body.postIdForLike];
+
+//   mb.query(checkLikeSql, valuesToCheck, (checkErr, checkData) => {
+//     if (checkErr) {
+//       console.error("Error checking existing like:", checkErr);
+//       return res.status(500).json({ error: "Internal server error" });
+//     }
+
+//     // If like already exists, respond that the user has already liked the post
+//     if (checkData.length > 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "You have already liked this post." });
+//     } else {
+//       // If like does not exist, proceed to insert the new like
+//       const insertLikeSql =
+//         "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
+//       const insertValues = [req.body.userIdForLIke, req.body.postIdForLike];
+
+//       mb.query(insertLikeSql, insertValues, (insertErr, insertData) => {
+//         if (insertErr) {
+//           console.error("Error inserting like:", insertErr);
+//           return res.status(500).json({ error: "Internal server error" });
+//         }
+//         return res.json({
+//           message: "Post liked successfully",
+//           data: insertData,
+//         });
+//       });
+//     }
+//   });
+// });
+
 app.post("/like", (req, res) => {
   // SQL query to check if the user has already liked the post
   const checkLikeSql =
     "SELECT * FROM Like_Table WHERE UserID = ? AND PostID = ?";
-  const valuesToCheck = [req.body.userIdForLIke, req.body.postIdForLike];
+  const valuesToCheck = [req.body.userIdForLIke, req.body.postIdForLike]; // Corrected variable name
 
   mb.query(checkLikeSql, valuesToCheck, (checkErr, checkData) => {
     if (checkErr) {
@@ -541,16 +578,25 @@ app.post("/like", (req, res) => {
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    // If like already exists, respond that the user has already liked the post
+    // If like already exists, remove the like
     if (checkData.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "You have already liked this post." });
+      // SQL query to delete the existing like
+      const deleteLikeSql =
+        "DELETE FROM Like_Table WHERE UserID = ? AND PostID = ?";
+      // Use the same valuesToCheck array for user ID and post ID
+      mb.query(deleteLikeSql, valuesToCheck, (deleteErr, deleteData) => {
+        if (deleteErr) {
+          console.error("Error deleting like:", deleteErr);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+        // Respond that the like has been successfully removed
+        return res.json({ message: "Like removed successfully" });
+      });
     } else {
       // If like does not exist, proceed to insert the new like
       const insertLikeSql =
         "INSERT INTO Like_Table (UserID, PostID) VALUES (?, ?)";
-      const insertValues = [req.body.userIdForLIke, req.body.postIdForLike];
+      const insertValues = [req.body.userIdForLIke, req.body.postIdForLike]; // Corrected variable name
 
       mb.query(insertLikeSql, insertValues, (insertErr, insertData) => {
         if (insertErr) {
@@ -641,7 +687,7 @@ app.post("/save", (req, res) => {
 
 //get method for liked post
 //get method for like
-app.get("/save/:save", (req, res) => {
+app.get("/profile/:saveId", (req, res) => {
   const saveId = req.params.saveId;
 
   // SQL query to join Like_Table and Post_Table on PostID
@@ -650,7 +696,7 @@ app.get("/save/:save", (req, res) => {
   SELECT mountains.* 
 FROM mountains
 JOIN Save_Table ON mountains.ID = Save_Table.PostID
-WHERE Save_Table.UserID = 1;  
+WHERE Save_Table.UserID = ?;  
   `;
 
   mb.query(query, [saveId], (err, results) => {
@@ -661,7 +707,7 @@ WHERE Save_Table.UserID = 1;
     }
 
     if (results.length === 0) {
-      res.status(404).send("No posts found for the given LikeID.");
+      res.status(404).send("No posts found for the given saveID.");
     } else {
       res.json(results);
     }
