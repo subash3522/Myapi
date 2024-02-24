@@ -8,6 +8,7 @@ const multer = require("multer");
 const path = require("path");
 const { log } = require("console");
 const fs = require("fs").promises;
+const fourthRouter = require("./Fourth");
 
 app.use(cookieParser());
 app.use(
@@ -103,7 +104,7 @@ app.post(
 
     //added later
     photoPath = path.resolve(photoPath);
-descriptionPath = path.resolve(descriptionPath);
+    descriptionPath = path.resolve(descriptionPath);
 
     //added later ends
 
@@ -173,6 +174,14 @@ app.get("/api/mountains", async (req, res) => {
   }
 });
 
+// app.get("/api/mountains", (req, res) => {
+//   const sql = "SELECT * FROM mountains";
+//   mb.query(sql, (err, data) => {
+//     if (err) return res.json(err);
+//     else return res.json(data);
+//   });
+// });
+
 //end of mountains get method
 
 //get method of mountain for id parameter
@@ -232,6 +241,27 @@ app.get("/mountain/:id", async (req, res) => {
   }
 });
 
+// app.get("/mountain/:id", (req, res) => {
+//   const mountainId = req.params.id;
+
+//   mb.query(
+//     "SELECT * FROM mountains WHERE id = ?",
+//     [mountainId],
+//     (err, results) => {
+//       if (err) {
+//         console.error("Error querying MySQL:", err);
+//         res.status(500).send("Internal Server Error");
+//       } else {
+//         if (results.length === 0) {
+//           res.status(404).send("Mountain not found");
+//         } else {
+//           res.json(results);
+//         }
+//       }
+//     }
+//   );
+// });
+
 //end of get metohd of mountain for id parameter
 
 //get for budget filter
@@ -279,13 +309,7 @@ app.get("/likecounter/:like", (req, res) => {
 });
 //like counter using param ends here
 
-app.get("/newtest", (req, res) => {
-  const sql = "SELECT * FROM login";
-  db.query(sql, (err, data) => {
-    if (err) return res.json(err);
-    return res.json(data);
-  });
-});
+app.use(fourthRouter);
 
 app.post("/newtest", (req, res) => {
   const sql = "INSERT INTO Login (Email, Phone, Password) VALUES (?,?,?)";
@@ -471,6 +495,12 @@ app.post("/userlogin", (req, res) => {
 //     }
 //   });
 // });
+
+app.get("/alba", (req, res, next) => {
+  res.write(req.url);
+
+  next();
+});
 
 const jwt = require("jsonwebtoken");
 
