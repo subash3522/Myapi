@@ -58,10 +58,10 @@ const db = mysql.createConnection({
 });
 
 const mb = mysql.createConnection({
-  host: "bbzrefjh7xcte7myk21j-mysql.services.clever-cloud.com",
-  user: "uuvp8d7q1g3nihqg",
-  password: "prJdEFZ50aFr7QibgJuY",
-  database: "bbzrefjh7xcte7myk21j",
+  host: "65.109.99.134",
+  user: "shivaksh_subash",
+  password: "Subash@123",
+  database: "shivaksh_suvasearch",
 });
 
 const sb = mysql.createConnection({
@@ -72,39 +72,40 @@ const sb = mysql.createConnection({
 });
 
 //post for image upload
-app.post("/upload", upload.single("image"), (req, res) => {
-  const image = req.file.filename;
-  const sql = "INSERT INTO imagetable (Image) VALUES (?)";
+// app.post("/upload", upload.single("image"), (req, res) => {
+//   const image = req.file.filename;
+//   const sql = "INSERT INTO imagetable (Image) VALUES (?)";
 
-  mb.query(sql, [image], (err, result) => {
-    if (err) return res.json({ message: "error image" });
-    return res.json({ status: "success" });
-  });
-});
+//   mb.query(sql, [image], (err, result) => {
+//     if (err) return res.json({ message: "error image" });
+//     return res.json({ status: "success" });
+//   });
+// });
 
-app.get("/upload", (req, res) => {
-  const sql = "SELECT * FROM imagetable";
-  mb.query(sql, (err, data) => {
-    if (err) return res.json(err);
-    return res.json(data);
-  });
-});
+// app.get("/upload", (req, res) => {
+//   const sql = "SELECT * FROM imagetable";
+//   mb.query(sql, (err, data) => {
+//     if (err) return res.json(err);
+//     return res.json(data);
+//   });
+// });
 
 //for mountains post method
 app.post(
   "/api/addMountain",
   upload.fields([
     { name: "photo", maxCount: 1 },
-    { name: "description", maxCount: 1 },
+    // { name: "description", maxCount: 1 },
   ]),
   (req, res) => {
-    const { mountainName, weather, popularity, budget, category } = req.body;
+    const { mountainName, weather, popularity, budget, category, description } =
+      req.body;
     const photoPath = req.files["photo"][0].filename;
-    const descriptionPath = req.files["description"][0].path;
+    // const descriptionPath = req.files["description"][0].path;
 
     //added later
-    photoPath = path.resolve(photoPath);
-    descriptionPath = path.resolve(descriptionPath);
+    // photoPath = path.resolve(photoPath);
+    // descriptionPath = path.resolve(descriptionPath);
 
     //added later ends
 
@@ -119,7 +120,7 @@ app.post(
         budget,
         category,
         photoPath,
-        descriptionPath,
+        description,
       ],
       (err, result) => {
         if (err) {
@@ -137,50 +138,50 @@ app.post(
 
 //formountains get method
 
-app.get("/api/mountains", async (req, res) => {
-  try {
-    const sql = "SELECT * FROM mountains";
-    const mountains = await new Promise((resolve, reject) => {
-      mb.query(sql, (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
+// app.get("/api/mountains",  (req, res) => {
 
-    // Read the content of .txt files
-    const mountainsWithContent = await Promise.all(
-      mountains.map(async (mountain) => {
-        const descriptionPath = mountain.descriptionPath;
+//     const sql = "SELECT * FROM mountains";
 
-        const descriptionContent = await fs.readFile(
-          descriptionPath,
+//     mb.query(sql, (err, data) => {
+//           if (err) return res.json(err);
+//           else return res.json(data)
 
-          "utf-8"
-        );
-        return {
-          ...mountain,
-          descriptionContent,
-        };
-      })
-    );
+//     // const mountains = await new Promise((resolve, reject) => {
+//     //   mb.query(sql, (err, result) => {
+//     //     if (err) {
+//     //       reject(err);
+//     //     } else {
+//     //       resolve(result);
+//     //     }
+//     //   });
+//     // });
 
-    res.json({ mountains: mountainsWithContent });
-  } catch (error) {
-    console.error("Error fetching mountains:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+//     // // Read the content of .txt files
+//     // const mountainsWithContent = await Promise.all(
+//     //   mountains.map(async (mountain) => {
+//     //     const descriptionPath = mountain.descriptionPath;
+
+//     //     const descriptionContent = await fs.readFile(
+//     //       descriptionPath,
+
+//     //       "utf-8"
+//     //     );
+//     //     return {
+//     //       ...mountain,
+//     //       descriptionContent,
+//     //     };
+//     //   })
+//     // );
+
+// }));
+
+app.get("/api/mountains", (req, res) => {
+  const sql = "SELECT * FROM mountains";
+  mb.query(sql, (err, data) => {
+    if (err) return res.json(err);
+    else return res.json(data);
+  });
 });
-
-// app.get("/api/mountains", (req, res) => {
-//   const sql = "SELECT * FROM mountains";
-//   mb.query(sql, (err, data) => {
-//     if (err) return res.json(err);
-//     else return res.json(data);
-//   });
-// });
 
 //end of mountains get method
 
@@ -209,36 +210,15 @@ app.get("/api/mountains", async (req, res) => {
 app.get("/mountain/:id", async (req, res) => {
   const mountainId = req.params.id;
 
-  try {
-    const sql = "SELECT * FROM mountains WHERE id = ?";
-    const mountain = await new Promise((resolve, reject) => {
-      mb.query(sql, [mountainId], (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
+  const sql = "SELECT * FROM mountains WHERE id = ?";
 
-    if (mountain.length === 0) {
-      res.status(404).send("Mountain not found");
-      return;
+  mb.query(sql, [mountainId], (err, result) => {
+    if (err) {
+      if (err) return res.json(err);
+    } else {
+      return res.json(result);
     }
-
-    const descriptionPath = mountain[0].descriptionPath;
-    const descriptionContent = await fs.readFile(descriptionPath, "utf-8");
-
-    const mountainWithContent = {
-      ...mountain[0],
-      descriptionContent,
-    };
-
-    res.json(mountainWithContent);
-  } catch (error) {
-    console.error("Error querying MySQL or reading file:", error);
-    res.status(500).send("Internal Server Error");
-  }
+  });
 });
 
 // app.get("/mountain/:id", (req, res) => {
@@ -652,7 +632,7 @@ app.post("/like", (req, res) => {
 //end of postmethod for like
 
 //get method for like
-app.get("/like/:likeId", (req, res) => {
+app.get("/profilelike/:likeId", (req, res) => {
   const likeId = req.params.likeId;
 
   // SQL query to join Like_Table and Post_Table on PostID
@@ -722,9 +702,8 @@ app.post("/save", (req, res) => {
 
 // end of post method for save option
 
-//get method for liked post
-//get method for like
-app.get("/profile/:saveId", (req, res) => {
+//get method for saved post
+app.get("/profilesave/:saveId", (req, res) => {
   const saveId = req.params.saveId;
 
   // SQL query to join Like_Table and Post_Table on PostID
@@ -751,9 +730,7 @@ WHERE Save_Table.UserID = ?;
   });
 });
 
-//end of get method for like
-
-//end of get method for liked post
+//end of get method for saved post
 
 //login authentication for badui
 app.get("/auth", verifyuser, (req, res) => {
