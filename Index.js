@@ -18,6 +18,7 @@ app.use(
       "https://suvasearch.com",
       "https://suvasearch-git-master-subash3522.vercel.app",
       "https://apitesting-com.onrender.com",
+      "https://suvasearch-rbbb-3l0vt43m6-subash3522s-projects.vercel.app",
     ],
     methods: ["GET", "POST"],
     credentials: true,
