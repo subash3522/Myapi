@@ -98,7 +98,7 @@ app.post(
     // { name: "description", maxCount: 1 },
   ]),
   (req, res) => {
-    const { mountainName, weather, popularity, budget, category, description } =
+    const {userId, mountainName, weather, popularity, budget, category, description } =
       req.body;
     const photoPath = req.files["photo"][0].filename;
     // const descriptionPath = req.files["description"][0].path;
@@ -110,10 +110,11 @@ app.post(
     //added later ends
 
     const sql =
-      "INSERT INTO mountains (mountainName,weather, popularity, budget, category, photoPath, descriptionPath) VALUES (?, ?, ?, ?,?,?,?)";
+      "INSERT INTO mountains (userId,mountainName,weather, popularity, budget, category, photoPath, descriptionPath) VALUES (?,?, ?, ?, ?,?,?,?)";
     mb.query(
       sql,
       [
+        userId,
         mountainName,
         weather,
         popularity,
