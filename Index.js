@@ -9,6 +9,8 @@ const path = require("path");
 const { log } = require("console");
 const fs = require("fs").promises;
 const fourthRouter = require("./Fourth");
+const fetchById = require("./FetchById");
+const GoingDateStore = require("./GoingDateStore");
 
 app.use(cookieParser());
 app.use(
@@ -20,7 +22,7 @@ app.use(
       "https://apitesting-com.onrender.com",
       "https://suvasearch-rbbb-3l0vt43m6-subash3522s-projects.vercel.app",
     ],
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT"],
     credentials: true,
   })
 );
@@ -99,8 +101,15 @@ app.post(
     // { name: "description", maxCount: 1 },
   ]),
   (req, res) => {
-    const {userId, mountainName, weather, popularity, budget, category, description } =
-      req.body;
+    const {
+      userId,
+      mountainName,
+      weather,
+      popularity,
+      budget,
+      category,
+      description,
+    } = req.body;
     const photoPath = req.files["photo"][0].filename;
     // const descriptionPath = req.files["description"][0].path;
 
@@ -137,6 +146,158 @@ app.post(
   }
 );
 //end for mountains post methos
+
+//start of userPostUpload post method
+
+app.post("/postUpload", upload.array("images", 10), (req, res) => {
+  const { userId, location, caption } = req.body;
+  const files = req.files;
+
+  const imagePath = files.map((file) => file.filename);
+
+  // Insert the user post into User_Posts table
+  const insertPostSql =
+    "INSERT INTO User_Posts (userId,destination, caption) VALUES (?,?, ?)";
+  mb.query(insertPostSql, [userId, location, caption], (err, postResult) => {
+    if (err) {
+      console.error("Error inserting into User_Posts:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
+    // Get the inserted post_id
+    const postId = postResult.insertId;
+
+    // Insert image paths into Post_Images table
+    const insertImagesSql =
+      "INSERT INTO Post_Images (post_id, image_path) VALUES ?";
+    const imageValues = imagePath.map((path) => [postId, path]);
+    mb.query(insertImagesSql, [imageValues], (err, imagesResult) => {
+      if (err) {
+        console.error("Error inserting into Post_Images:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+        return;
+      }
+
+      console.log("UserPost added to the database");
+      res.json({ message: "UserPost added successfully" });
+    });
+  });
+});
+
+//end of userPostUpload post method
+
+//end of postupload get method
+
+// Assuming you have already initialized your Express app and MySQL connection (`mb`)...
+
+// Endpoint to fetch all user posts with their associated image paths
+app.get("/UserPostFetchForEdit/:postId", (req, res) => {
+  // Extract the post_id from the URL parameter
+  const postId = req.params.postId;
+
+  // SQL query to fetch data for the specified post_id
+  const sql =
+    "SELECT User_Posts.*, GROUP_CONCAT(Post_Images.image_path) AS image_paths " +
+    "FROM User_Posts " +
+    "LEFT JOIN Post_Images ON User_Posts.post_id = Post_Images.post_id " +
+    "WHERE User_Posts.post_id = ? " + // Using placeholder for post_id
+    "GROUP BY User_Posts.post_id";
+
+  // Execute the SQL query with the post_id
+  mb.query(sql, [postId], (err, results) => {
+    if (err) {
+      console.error("Error fetching posts:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      // Send the fetched posts with image paths as JSON response
+      res.json(results);
+    }
+  });
+});
+
+//end of usepost get method
+
+//userpostfetch starts here
+app.get("/UserPostFetch", (req, res) => {
+  // SQL query to join User_Posts and login_table tables
+  const sql =
+    "SELECT User_Posts.*, login_table.Email AS user_email, " +
+    "GROUP_CONCAT(Post_Images.image_path) AS image_paths " +
+    "FROM User_Posts " +
+    "LEFT JOIN login_table ON User_Posts.userId = login_table.ID " +
+    "LEFT JOIN Post_Images ON User_Posts.post_id = Post_Images.post_id " +
+    "GROUP BY User_Posts.post_id";
+
+  // Execute the SQL query
+  mb.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error fetching posts:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      // Send the fetched posts with image paths as JSON response
+      res.json(results);
+    }
+  });
+});
+
+//userpostfetch ends here
+
+//edituser post starts here
+
+app.put("/postuploadEdit", upload.array("images", 10), (req, res) => {
+  const { userId, location, caption } = req.body;
+  const files = req.files;
+
+  // Extract image paths if new images are uploaded
+  const newImagePaths = files ? files.map((file) => file.filename) : [];
+
+  // Update the location and caption for the specified post_id
+  const updatePostSql =
+    "UPDATE User_Posts " +
+    "SET destination = ?, caption = ? " +
+    "WHERE post_id = ?";
+  mb.query(updatePostSql, [location, caption, userId], (err, results) => {
+    if (err) {
+      console.error("Error updating User_Posts:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
+    // If new images are uploaded, insert them into Post_Images table
+    if (newImagePaths.length > 0) {
+      // Delete existing images related to the post_id
+      const deleteImagesSql = "DELETE FROM Post_Images WHERE post_id = ?";
+      mb.query(deleteImagesSql, [userId], (err, deleteResults) => {
+        if (err) {
+          console.error("Error deleting existing images:", err);
+          res.status(500).json({ error: "Internal Server Error" });
+          return;
+        }
+
+        // Insert new image paths into Post_Images table
+        const insertImagesSql =
+          "INSERT INTO Post_Images (post_id, image_path) VALUES ?";
+        const imageValues = newImagePaths.map((path) => [userId, path]);
+        mb.query(insertImagesSql, [imageValues], (err, imagesResult) => {
+          if (err) {
+            console.error("Error inserting new images:", err);
+            res.status(500).json({ error: "Internal Server Error" });
+            return;
+          }
+
+          console.log("Post updated with new images");
+          res.json({ message: "Post updated successfully" });
+        });
+      });
+    } else {
+      // No new images uploaded, send success response
+      res.json({ message: "Post updated successfully" });
+    }
+  });
+});
+
+//edituser posts ends here
 
 //formountains get method
 
@@ -246,13 +407,14 @@ app.get("/mountain/:id", async (req, res) => {
 
 //end of get metohd of mountain for id parameter
 
-//get for budget filter
-app.get("/mountains/:budget", (req, res) => {
-  const mountainId = req.params.budget;
+// //get for budget filter
+app.get("/mountains/:column/:content", (req, res) => {
+  const column = req.params.column;
+  const content = req.params.content;
 
   mb.query(
-    "SELECT * FROM mountains WHERE budget = ?",
-    [mountainId],
+    `SELECT * FROM mountains WHERE ${column} = ?`,
+    [content],
     (err, results) => {
       if (err) {
         console.error("Error querying MySQL:", err);
@@ -267,6 +429,12 @@ app.get("/mountains/:budget", (req, res) => {
     }
   );
 });
+
+// //get for budget filter ends here
+
+//new filter get result starts here
+
+//new filter get result ends here
 
 //like counter using param starts here
 app.get("/likecounter/:like", (req, res) => {
@@ -292,6 +460,8 @@ app.get("/likecounter/:like", (req, res) => {
 //like counter using param ends here
 
 app.use(fourthRouter);
+app.use(fetchById);
+app.use(GoingDateStore);
 
 app.post("/newtest", (req, res) => {
   const sql = "INSERT INTO Login (Email, Phone, Password) VALUES (?,?,?)";
